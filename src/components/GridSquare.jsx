@@ -13,6 +13,8 @@ const GridSquare = ({ value, onMouseDown, onMouseEnter }) => {
                 return "bg-yellow-500";
             case "P":
                 return "bg-purple-500";
+            case "A":
+                return "bg-green-500";
             default:
                 return "bg-gray-500";
             }
