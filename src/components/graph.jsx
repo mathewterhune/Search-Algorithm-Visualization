@@ -51,7 +51,8 @@ const buildAdjacencyList = (grid) => {
           nr < rows &&
           nc >= 0 &&
           nc < cols &&
-          grid[nr][nc] !== "X"
+          grid[nr][nc] !== "X" &&
+          grid[nr][nc] !== "P"
         ) {
           adjList[node].push(`${nr},${nc}`);
         }
@@ -65,6 +66,42 @@ const buildAdjacencyList = (grid) => {
 
   return adjList;
 };
+
+
+const BFS = (grid, adjacencyList, start, end) => {
+  const queue = [start];
+  const visited = new Set();
+  const parent = {};
+
+  visited.add(start);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (current === end) {
+      break;
+    }
+
+    for (const neighbor of adjacencyList[current]) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+        parent[neighbor] = current;
+      }
+    }
+  }
+
+  // Reconstruct the path
+  const path = [];
+  let current = end;
+  while (current !== start) {
+    path.unshift(current);
+    current = parent[current];
+  }
+  path.unshift(start);
+
+  return path;  
+}
 
 const Graph = () => {
   const [rows, setRows] = useState(20);
@@ -109,6 +146,7 @@ const toggleCell = (row, col) => {
         // SOURCE mode
         if (placementMode === "source") {
           // Clicked current source again = remove it
+          // console.log("Mode: Place source");
           if (isStart) {
             setStartPos(null);
             return "E";
@@ -117,6 +155,7 @@ const toggleCell = (row, col) => {
           if (startPos) {
             const [sr, sc] = startPos;
             prevGrid[sr][sc] = "E"; // Clear previous source
+            // console.log(`Source Position set to: [${sr},${sc}]`);
           }
           setStartPos([row, col]);
           return "S";
@@ -124,15 +163,19 @@ const toggleCell = (row, col) => {
 
         // TARGET mode
         if (placementMode === "target") {
+          // console.log("Mode: Place Target");
+
           if (isTarget) {
             setEndPos(null);
             return "E";
           }
+          // Set a new target
           if (endPos) {
             const [er, ec] = endPos;
             prevGrid[er][ec] = "E";
           }
           setEndPos([row, col]);
+          // console.log(`Target Position set to: [${row},${col}]`);
           return "T";
         }
 
@@ -251,12 +294,38 @@ const toggleCell = (row, col) => {
             Reset
           </button>
 
-          <button
-            onClick={() => buildAdjacencyList(grid)}
-            className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-gray-500 hover:bg-gray-600 mt-4`}
-          >
-            Run
-          </button>
+<button
+  onClick={() => {
+    if (!startPos || !endPos) {
+      alert("Please place both a source and a target node.");
+      return;
+    }
+
+    const startKey = `${startPos[0]},${startPos[1]}`;
+    const endKey = `${endPos[0]},${endPos[1]}`;
+    const adjList = buildAdjacencyList(grid);
+    const path = BFS(grid, adjList, startKey, endKey);
+
+    console.log("BFS Path:", path);
+
+    setGrid((prevGrid) => {
+      const newGrid = prevGrid.map((row, r) =>
+        row.map((cell, c) => {
+          const key = `${r},${c}`;
+          if (path.includes(key) && cell !== "S" && cell !== "T") {
+            return "L";
+          }
+          return cell;
+        })
+      );
+      return newGrid;
+    });
+  }}
+  className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-gray-500 hover:bg-gray-600 mt-4`}
+>
+  Run
+</button>
+
         </div>
       </div>
     </div>
