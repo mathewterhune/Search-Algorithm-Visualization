@@ -1,13 +1,11 @@
-export const BFS = (grid,adjacencyList,start,end,handleVisit,handlePathCompletion) => {
+export const BFS = (grid, adjacencyList, start, end, handleVisit, handlePathCompletion) => {
   // Initialize
   const queue = [start];
-  const visited = new Set();
+  const visited = new Set([start]); // Mark start as visited immediately
   const parent = {};
 
-  // Add the start node to the queue
-  visited.add(start);
-
   let step = 0;
+  let foundPath = false;
 
   // BFS CONTROL LOOP - Set @ 30ms interval, which controls the speed of the animation
   const interval = setInterval(() => {
@@ -18,40 +16,46 @@ export const BFS = (grid,adjacencyList,start,end,handleVisit,handlePathCompletio
       return;
     }
 
-    // Dequeue the next node
-    const current = queue.shift();
+    // Process multiple nodes per interval to reduce stuttering
+    const nodesToProcess = Math.min(5, queue.length);
+    
+    for (let i = 0; i < nodesToProcess; i++) {
+      // Dequeue the next node
+      const current = queue.shift();
 
-    // Handle visiting the next node
-    handleVisit(current);
+      // Handle visiting the next node
+      handleVisit(current);
 
-    // Check if we reached the end node
-    if (current === end) {
-      clearInterval(interval); // Stop the interval from running if we found the node
+      // Check if we reached the end node
+      if (current === end) {
+        foundPath = true;
+        
+        // Reconstruct path
+        const path = [];
+        let curr = end;
+        while (curr !== start) {
+          path.unshift(curr);
+          curr = parent[curr];
+        }
+        path.unshift(start);
 
-      // Reconstruct path
-      const path = [];
-      let curr = end;
-      while (curr !== start) {
-        path.unshift(curr);
-        curr = parent[curr];
+        clearInterval(interval); // Stop the interval
+        handlePathCompletion(path); // Function to animate the path
+        return;
       }
-      path.unshift(start);
 
-      handlePathCompletion(path); // Function to animate the path
-      return;
-    }
-
-    // Reaching here implies we haven't reached the end node yet
-    for (const neighbor of adjacencyList[current]) {
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push(neighbor);
-        parent[neighbor] = current;
+      // Process neighbors
+      for (const neighbor of adjacencyList[current] || []) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+          parent[neighbor] = current;
+        }
       }
     }
 
     step++;
-  }, 30); // 30ms delay between steps
+  }, 30); // 30ms delay between batches of nodes
 };
 
 export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompletion) => {
@@ -63,44 +67,55 @@ export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompleti
     const stack = [source];
     const visited = new Set([source]); // mark source as visited upfront
     const parent = {};
+    let foundPath = false;
 
     handleVisit(source); // visit source
 
     const interval = setInterval(() => {
-        if (stack.length === 0) {
+        if (stack.length === 0 || foundPath) {
             clearInterval(interval);
-            handlePathCompletion(null); // no path found
-            return;
-        }
-
-        const current = stack.pop();
-
-        if (current === sink) {
-            clearInterval(interval);
-
-            const path = [];
-            let node = sink;
-
-            while (node !== source) {
-                path.unshift(node);
-                node = parent[node];
+            if (!foundPath) {
+                handlePathCompletion(null); // no path found
             }
-            path.unshift(source);
-
-            handlePathCompletion(path);
             return;
         }
 
-        for (const neighbor of adjList[current] || []) {
-            if (!visited.has(neighbor)) {
-                visited.add(neighbor);
-                parent[neighbor] = current;
-                stack.push(neighbor);
-                handleVisit(neighbor); // visit only newly discovered nodes
+        // Process multiple nodes per interval to reduce stuttering
+        const nodesToProcess = Math.min(5, stack.length);
+        
+        for (let i = 0; i < nodesToProcess && !foundPath && stack.length > 0; i++) {
+            const current = stack.pop();
+
+            if (current === sink) {
+                foundPath = true;
+                
+                const path = [];
+                let node = sink;
+
+                while (node !== source) {
+                    path.unshift(node);
+                    node = parent[node];
+                }
+                path.unshift(source);
+
+                clearInterval(interval);
+                handlePathCompletion(path);
+                return;
+            }
+
+            // Get neighbors and process them
+            const neighbors = adjList[current] || [];
+            
+            // Process in reverse order for DFS to maintain expected behavior
+            for (let j = neighbors.length - 1; j >= 0; j--) {
+                const neighbor = neighbors[j];
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    parent[neighbor] = current;
+                    stack.push(neighbor);
+                    handleVisit(neighbor);
+                }
             }
         }
     }, 30);
 };
-
-
-

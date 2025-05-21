@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import GridSquare from "./GridSquare";
 import { InitializeArray, buildAdjacencyList } from "../logic/logicUtils";
 import { BFS, DFS } from "../logic/algorithms";
@@ -7,52 +7,33 @@ const Graph = () => {
   const [rows, setRows] = useState(20);
   const [cols, setCols] = useState(30);
   const [grid, setGrid] = useState(() => InitializeArray(20, 30));
-
   const [isMouseDown, setIsMouseDown] = useState(false);
-
   const [placementMode, setPlacementMode] = useState("source");
   const [startPos, setStartPos] = useState(null);
   const [endPos, setEndPos] = useState(null);
-
-  // Inside Graph.jsx
-const handleVisit = (node) => {
-  const [x, y] = node.split(",").map(Number);
-  setGrid(prev => {
-    if (prev[x][y] !== "E") return prev;
-    const newRow = [...prev[x]];
-    newRow[y] = "L";
-    const newGrid = [...prev];
-    newGrid[x] = newRow;
-    return newGrid;
-  });
-};
-
-
-
-
-const handlePathCompletion = (path) => {
-  if (!path) return;
-
-  path.forEach((node, i) => {
-    setTimeout(() => {
-      const [x, y] = node.split(",").map(Number);
-
-      setGrid(prev => {
-        const val = prev[x][y];
-        if (val === "S" || val === "T" || val === "A") return prev;
-
-        const newRow = [...prev[x]];
-        newRow[y] = "A";
-
-        const newGrid = [...prev];
-        newGrid[x] = newRow;
-
-        return newGrid;
-      });
-    }, i * 40);
-  });
-};
-
+  
+  // For visualization state
+  const [visitedCells, setVisitedCells] = useState(new Set());
+  const [pathCells, setPathCells] = useState(new Set());
+  const [isRunning, setIsRunning] = useState(false);
+  
+  // Create refs to avoid re-creating objects/functions when not needed
+  const gridRef = useRef(grid);
+  const visitedRef = useRef(visitedCells);
+  const pathRef = useRef(pathCells);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+  
+  useEffect(() => {
+    visitedRef.current = visitedCells;
+  }, [visitedCells]);
+  
+  useEffect(() => {
+    pathRef.current = pathCells;
+  }, [pathCells]);
 
   // Global mouse up listener
   useEffect(() => {
@@ -61,66 +42,181 @@ const handlePathCompletion = (path) => {
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
-  // Resize grid
-  const handleResize = () => {
+  // Memoize adjacency list - only recompute when grid changes
+  const adjacencyList = useMemo(() => buildAdjacencyList(grid), [grid]);
+
+  // Reset visualization state
+  const resetVisualization = useCallback(() => {
+    setVisitedCells(new Set());
+    setPathCells(new Set());
+  }, []);
+
+  // Handle resize with memoization
+  const handleResize = useCallback(() => {
     const parsedRows = parseInt(rows);
     const parsedCols = parseInt(cols);
     if (!isNaN(parsedRows) && !isNaN(parsedCols)) {
       setGrid(InitializeArray(parsedRows, parsedCols));
+      resetVisualization();
+      setStartPos(null);
+      setEndPos(null);
     }
-  };
+  }, [rows, cols, resetVisualization]);
 
-  // Toggle cell between wall and empty
-const toggleCell = (row, col) => {
-  setGrid(prev => {
-    const cell = prev[row][col];
+  // Optimized cell toggle
+  const toggleCell = useCallback((row, col) => {
+    setGrid(prev => {
+      const cell = prev[row][col];
 
-    // early return if nothing would change
-    if (placementMode === "walls" && (cell === "S" || cell === "T" || cell === "X")) return prev;
+      // Early return if nothing would change
+      if (placementMode === "walls" && (cell === "S" || cell === "T" || cell === "X")) return prev;
 
-    const newRow = [...prev[row]];
-    const newGrid = [...prev];
+      // Create a new grid copy only when necessary
+      const newGrid = [...prev];
+      const newRow = [...prev[row]];
 
-    // example: placing a wall
-    if (placementMode === "walls") {
-      newRow[col] = cell === "P" ? "E" : "P";
-    }
-    else if (placementMode === "source") {
-      if (cell === "S") {
-        newRow[col] = "E";
-        setStartPos(null);
-      } else {
-        if (startPos) {
-          const [sr, sc] = startPos;
-          const updatedStartRow = [...prev[sr]];
-          updatedStartRow[sc] = "E";
-          newGrid[sr] = updatedStartRow;
-        }
-        newRow[col] = "S";
-        setStartPos([row, col]);
+      if (placementMode === "walls") {
+        newRow[col] = cell === "P" ? "E" : "P";
       }
-    }
-    else if (placementMode === "target") {
-      if (cell === "T") {
-        newRow[col] = "E";
-        setEndPos(null);
-      } else {
-        if (endPos) {
-          const [er, ec] = endPos;
-          const updatedEndRow = [...prev[er]];
-          updatedEndRow[ec] = "E";
-          newGrid[er] = updatedEndRow;
+      else if (placementMode === "source") {
+        if (cell === "S") {
+          newRow[col] = "E";
+          setStartPos(null);
+        } else {
+          if (startPos) {
+            const [sr, sc] = startPos;
+            const updatedStartRow = [...prev[sr]];
+            updatedStartRow[sc] = "E";
+            newGrid[sr] = updatedStartRow;
+          }
+          newRow[col] = "S";
+          setStartPos([row, col]);
         }
-        newRow[col] = "T";
-        setEndPos([row, col]);
       }
+      else if (placementMode === "target") {
+        if (cell === "T") {
+          newRow[col] = "E";
+          setEndPos(null);
+        } else {
+          if (endPos) {
+            const [er, ec] = endPos;
+            const updatedEndRow = [...prev[er]];
+            updatedEndRow[ec] = "E";
+            newGrid[er] = updatedEndRow;
+          }
+          newRow[col] = "T";
+          setEndPos([row, col]);
+        }
+      }
+
+      newGrid[row] = newRow;
+      return newGrid;
+    });
+    
+    // Reset visualization when grid changes
+    resetVisualization();
+  }, [placementMode, startPos, endPos, resetVisualization]);
+
+  // Optimized visit handler - doesn't update grid state for every visit
+  const handleVisit = useCallback((node) => {
+    const [x, y] = node.split(",").map(Number);
+    setVisitedCells(prev => {
+      const newVisited = new Set(prev);
+      newVisited.add(`${x},${y}`);
+      return newVisited;
+    });
+  }, []);
+
+  // Optimized path handler - uses a separate state instead of updating grid
+  const handlePathCompletion = useCallback((path) => {
+    if (!path) {
+      setIsRunning(false);
+      return;
     }
 
-    newGrid[row] = newRow;
-    return newGrid;
-  });
-};
+    // Animate path over time
+    path.forEach((node, i) => {
+      setTimeout(() => {
+        setPathCells(prev => {
+          const newPath = new Set(prev);
+          newPath.add(node);
+          return newPath;
+        });
+        
+        // Mark when animation is complete
+        if (i === path.length - 1) {
+          setIsRunning(false);
+        }
+      }, i * 40);
+    });
+  }, []);
 
+  // Run algorithm function
+  const runAlgorithm = useCallback(() => {
+    if (!startPos || !endPos) {
+      alert("Please place both a source and a target node.");
+      return;
+    }
+
+    // Reset visualization
+    resetVisualization();
+    setIsRunning(true);
+
+    const startKey = `${startPos[0]},${startPos[1]}`;
+    const endKey = `${endPos[0]},${endPos[1]}`;
+
+    // Use the memoized adjacency list
+    BFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
+    // DFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
+  }, [grid, adjacencyList, startPos, endPos, handleVisit, handlePathCompletion, resetVisualization]);
+
+  // Calculate cell status once - handles both base grid and visualization overlays
+  const getCellStatus = useCallback((rowIndex, colIndex) => {
+    const key = `${rowIndex},${colIndex}`;
+    const baseValue = grid[rowIndex][colIndex];
+    
+    // Path visualization takes precedence
+    if (pathCells.has(key) && baseValue !== "S" && baseValue !== "T") {
+      return "A";
+    }
+    
+    // Visited cells next
+    if (visitedCells.has(key) && baseValue !== "S" && baseValue !== "T") {
+      return "L";
+    }
+    
+    // Base grid value otherwise
+    return baseValue;
+  }, [grid, visitedCells, pathCells]);
+
+  // Memo-ize grid rendering to prevent unnecessary re-renders
+  const gridDisplay = useMemo(() => (
+    <table className="border-separate border-spacing-0.5 mx-auto">
+      <tbody>
+        {grid.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {row.map((_, colIndex) => {
+              const cellStatus = getCellStatus(rowIndex, colIndex);
+              return (
+                <td key={colIndex}>
+                  <GridSquare
+                    value={cellStatus}
+                    onMouseDown={() => {
+                      setIsMouseDown(true);
+                      toggleCell(rowIndex, colIndex);
+                    }}
+                    onMouseEnter={() => {
+                      if (isMouseDown) toggleCell(rowIndex, colIndex);
+                    }}
+                  />
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ), [grid, getCellStatus, toggleCell, isMouseDown]);
 
   return (
     <div className="w-3/4 select-none">
@@ -141,6 +237,7 @@ const toggleCell = (row, col) => {
           onChange={(e) => setRows(e.target.value)}
           className="border rounded px-3 py-1 text-center w-20"
           placeholder="Rows"
+          disabled={isRunning}
         />
         <input
           type="number"
@@ -149,10 +246,12 @@ const toggleCell = (row, col) => {
           onChange={(e) => setCols(e.target.value)}
           className="border rounded px-3 py-1 text-center w-20"
           placeholder="Cols"
+          disabled={isRunning}
         />
         <button
           onClick={handleResize}
           className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+          disabled={isRunning}
         >
           Generate Grid
         </button>
@@ -165,6 +264,7 @@ const toggleCell = (row, col) => {
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white ${
               placementMode === "source" ? "bg-blue-700" : "bg-blue-500"
             }`}
+            disabled={isRunning}
           >
             Source
           </button>
@@ -173,6 +273,7 @@ const toggleCell = (row, col) => {
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white ${
               placementMode === "target" ? "bg-green-700" : "bg-green-500"
             }`}
+            disabled={isRunning}
           >
             Sink
           </button>
@@ -181,58 +282,31 @@ const toggleCell = (row, col) => {
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white ${
               placementMode === "walls" ? "bg-purple-700" : "bg-purple-500"
             }`}
+            disabled={isRunning}
           >
             Walls
           </button>
         </div>
 
-        <table className="border-separate border-spacing-0.5 mx-auto">
-          <tbody>
-            {grid.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, colIndex) => (
-                  <td key={colIndex}>
-                    <GridSquare
-                      value={cell}
-                      onMouseDown={() => {
-                        setIsMouseDown(true);
-                        toggleCell(rowIndex, colIndex);
-                      }}
-                      onMouseEnter={() => {
-                        if (isMouseDown) toggleCell(rowIndex, colIndex);
-                      }}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {gridDisplay}
+        
         <div className="flex justify-center items-center gap-4">
           <button
-            onClick={() => handleResize(rows, cols)}
+            onClick={handleResize}
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-red-500 hover:bg-red-600 mt-4`}
+            disabled={isRunning}
           >
             Reset
           </button>
 
           <button
-            onClick={() => {
-              if (!startPos || !endPos) {
-                alert("Please place both a source and a target node.");
-                return;
-              }
-
-              const startKey = `${startPos[0]},${startPos[1]}`;
-              const endKey = `${endPos[0]},${endPos[1]}`;
-              const adjList = buildAdjacencyList(grid);
-
-              BFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
-              // DFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
-            }}
-            className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-gray-500 hover:bg-gray-600 mt-4`}
+            onClick={runAlgorithm}
+            className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white ${
+              isRunning ? "bg-gray-400" : "bg-gray-500 hover:bg-gray-600"
+            } mt-4`}
+            disabled={isRunning}
           >
-            Run
+            {isRunning ? "Running..." : "Run"}
           </button>
         </div>
       </div>
@@ -240,4 +314,4 @@ const toggleCell = (row, col) => {
   );
 };
 
-export default Graph;
+export default React.memo(Graph);

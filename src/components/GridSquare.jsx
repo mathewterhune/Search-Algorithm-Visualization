@@ -1,4 +1,6 @@
-const GridSquare = ({ value, onMouseDown, onMouseEnter }) => {
+import React from "react";
+
+const GridSquare = React.memo(({ value, onMouseDown, onMouseEnter }) => {
     const setColour = (value) => {
         switch (value) {
             case "E":
@@ -17,7 +19,7 @@ const GridSquare = ({ value, onMouseDown, onMouseEnter }) => {
                 return "bg-green-500";
             default:
                 return "bg-gray-500";
-            }
+        }
     };
 
     return (
@@ -27,8 +29,8 @@ const GridSquare = ({ value, onMouseDown, onMouseEnter }) => {
             className={`w-4 h-4 ${setColour(
                 value
             )} cursor-pointer hover:brightness-125 select-none`}
-            ></div>
+        ></div>
     );
-};
+}); // ✅ THIS is the missing piece
 
 export default GridSquare;
