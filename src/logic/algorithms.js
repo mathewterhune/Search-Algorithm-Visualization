@@ -55,29 +55,28 @@ export const BFS = (grid,adjacencyList,start,end,handleVisit,handlePathCompletio
 };
 
 export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompletion) => {
-    const stack = [source];
-    const visited = new Set();
-    const parent = {};
-
-    // Preliminary check to see if the source and the sink are the same
     if (source === sink) {
         handlePathCompletion([source]);
         return;
     }
 
+    const stack = [source];
+    const visited = new Set([source]); // mark source as visited upfront
+    const parent = {};
 
-    const interval = setInterval( () => {
+    handleVisit(source); // visit source
+
+    const interval = setInterval(() => {
         if (stack.length === 0) {
             clearInterval(interval);
-            handlePathCompletion(null); // No path was found
+            handlePathCompletion(null); // no path found
             return;
         }
 
         const current = stack.pop();
-        handleVisit(current);
 
         if (current === sink) {
-            clearInterval(interval); 
+            clearInterval(interval);
 
             const path = [];
             let node = sink;
@@ -87,20 +86,21 @@ export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompleti
                 node = parent[node];
             }
             path.unshift(source);
-            handlePathCompletion(path); // Function to animate the path
+
+            handlePathCompletion(path);
             return;
         }
-        
-        visited.add(current);
 
-        for (const neighbour of adjList[current]) {
-            if (!visited.has(neighbour)) {
-                visited.add(neighbour);
-                stack.push(neighbour);
-                parent[neighbour] = current;
+        for (const neighbor of adjList[current] || []) {
+            if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                parent[neighbor] = current;
+                stack.push(neighbor);
+                handleVisit(neighbor); // visit only newly discovered nodes
             }
         }
+    }, 30);
+};
 
-    },30);
 
-}
+
