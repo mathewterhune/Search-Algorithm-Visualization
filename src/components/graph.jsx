@@ -166,8 +166,8 @@ const Graph = () => {
     const endKey = `${endPos[0]},${endPos[1]}`;
 
     // Use the memoized adjacency list
-    BFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
-    // DFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
+    // BFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
+    DFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
   }, [grid, adjacencyList, startPos, endPos, handleVisit, handlePathCompletion, resetVisualization]);
 
   // Calculate cell status once - handles both base grid and visualization overlays

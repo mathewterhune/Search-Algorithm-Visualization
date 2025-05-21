@@ -59,63 +59,106 @@ export const BFS = (grid, adjacencyList, start, end, handleVisit, handlePathComp
 };
 
 export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompletion) => {
+    // Handle edge case: source is the sink
     if (source === sink) {
         handlePathCompletion([source]);
         return;
     }
 
-    const stack = [source];
-    const visited = new Set([source]); // mark source as visited upfront
+    // Track visited nodes and parent relationships for path reconstruction
+    const visited = new Set([source]);
     const parent = {};
     let foundPath = false;
-
-    handleVisit(source); // visit source
-
+    
+    // Define the recursive DFS function with controlled timing
+    const dfsStep = (current, depth = 0) => {
+        // Visit the current node
+        handleVisit(current);
+        
+        // Base case: reached the sink
+        if (current === sink) {
+            foundPath = true;
+            
+            // Reconstruct the path
+            const path = [];
+            let node = sink;
+            while (node !== source) {
+                path.unshift(node);
+                node = parent[node];
+            }
+            path.unshift(source);
+            
+            handlePathCompletion(path);
+            return true;
+        }
+        
+        // Get neighbors for the current node
+        const neighbors = adjList[current] || [];
+        
+        // Process neighbor nodes
+        return { 
+            current,
+            neighbors: neighbors.filter(neighbor => !visited.has(neighbor)),
+            index: 0
+        };
+    };
+    
+    // Initialize DFS with the source node
+    const stack = [dfsStep(source)];
+    
+    // Start timer for controlled visualization
     const interval = setInterval(() => {
+        // If stack is empty, no path exists
         if (stack.length === 0 || foundPath) {
             clearInterval(interval);
             if (!foundPath) {
-                handlePathCompletion(null); // no path found
+                handlePathCompletion(null);
             }
             return;
         }
-
-        // Process multiple nodes per interval to reduce stuttering
-        const nodesToProcess = Math.min(5, stack.length);
         
-        for (let i = 0; i < nodesToProcess && !foundPath && stack.length > 0; i++) {
-            const current = stack.pop();
-
-            if (current === sink) {
-                foundPath = true;
-                
-                const path = [];
-                let node = sink;
-
-                while (node !== source) {
-                    path.unshift(node);
-                    node = parent[node];
-                }
-                path.unshift(source);
-
-                clearInterval(interval);
-                handlePathCompletion(path);
-                return;
-            }
-
-            // Get neighbors and process them
-            const neighbors = adjList[current] || [];
+        // Get the current frame from the top of the stack
+        const frame = stack[stack.length - 1];
+        
+        // Process multiple steps per interval to reduce stuttering
+        // But still maintain the correct DFS order
+        let stepsProcessed = 0;
+        const maxStepsPerInterval = 3;
+        
+        while (stepsProcessed < maxStepsPerInterval && stack.length > 0 && !foundPath) {
+            // Get the current frame from the top of the stack
+            const frame = stack[stack.length - 1];
             
-            // Process in reverse order for DFS to maintain expected behavior
-            for (let j = neighbors.length - 1; j >= 0; j--) {
-                const neighbor = neighbors[j];
-                if (!visited.has(neighbor)) {
-                    visited.add(neighbor);
-                    parent[neighbor] = current;
-                    stack.push(neighbor);
-                    handleVisit(neighbor);
-                }
+            // If we've processed all neighbors, backtrack
+            if (frame.index >= frame.neighbors.length) {
+                stack.pop();
+                stepsProcessed++;
+                continue;
             }
+            
+            // Get the next neighbor to explore
+            const neighbor = frame.neighbors[frame.index];
+            frame.index++;
+            
+            // Mark as visited and set parent
+            visited.add(neighbor);
+            parent[neighbor] = frame.current;
+            
+            // Process this neighbor
+            const result = dfsStep(neighbor, stack.length);
+            
+            // If we found the sink, stop processing
+            if (result === true) {
+                foundPath = true;
+                clearInterval(interval);
+                break;
+            }
+            
+            // Otherwise, push the new frame to the stack
+            stack.push(result);
+            stepsProcessed++;
         }
     }, 30);
 };
+
+
