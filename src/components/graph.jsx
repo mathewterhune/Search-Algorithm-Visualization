@@ -15,30 +15,44 @@ const Graph = () => {
   const [endPos, setEndPos] = useState(null);
 
   // Inside Graph.jsx
-  const handleVisit = (node) => {
-    const [x, y] = node.split(",").map(Number);
-    setGrid((prev) => {
-      const newGrid = [...prev];
-      if (newGrid[x][y] === "E") newGrid[x][y] = "L";
-      return [...newGrid];
-    });
-  };
+const handleVisit = (node) => {
+  const [x, y] = node.split(",").map(Number);
+  setGrid(prev => {
+    if (prev[x][y] !== "E") return prev;
+    const newRow = [...prev[x]];
+    newRow[y] = "L";
+    const newGrid = [...prev];
+    newGrid[x] = newRow;
+    return newGrid;
+  });
+};
 
-  const handlePathCompletion = (path) => {
-    if (!path) return;
-    path.forEach((node, i) => {
-      setTimeout(() => {
-        const [x,y] = node.split(",").map(Number);
-        setGrid((prev) => {
-          const newGrid = [...prev];
-          if (newGrid[x][y] !== "S" && newGrid[x][y] !== "T") {
-            newGrid[x][y] = "A";
-          }
-          return [...newGrid];
-        });
-      }, i * 40);
-    });
-  };
+
+
+
+const handlePathCompletion = (path) => {
+  if (!path) return;
+
+  path.forEach((node, i) => {
+    setTimeout(() => {
+      const [x, y] = node.split(",").map(Number);
+
+      setGrid(prev => {
+        const val = prev[x][y];
+        if (val === "S" || val === "T" || val === "A") return prev;
+
+        const newRow = [...prev[x]];
+        newRow[y] = "A";
+
+        const newGrid = [...prev];
+        newGrid[x] = newRow;
+
+        return newGrid;
+      });
+    }, i * 40);
+  });
+};
+
 
   // Global mouse up listener
   useEffect(() => {
@@ -57,72 +71,56 @@ const Graph = () => {
   };
 
   // Toggle cell between wall and empty
-  const toggleCell = (row, col) => {
-    setGrid((prevGrid) => {
-      const newGrid = prevGrid.map((r, rIndex) =>
-        r.map((cell, cIndex) => {
-          if (rIndex !== row || cIndex !== col) return cell;
+const toggleCell = (row, col) => {
+  setGrid(prev => {
+    const cell = prev[row][col];
 
-          const isStart = cell === "S";
-          const isTarget = cell === "T";
+    // early return if nothing would change
+    if (placementMode === "walls" && (cell === "S" || cell === "T" || cell === "X")) return prev;
 
-          // Don't allow modifying border walls
-          if (cell === "X") return cell;
+    const newRow = [...prev[row]];
+    const newGrid = [...prev];
 
-          // SOURCE mode
-          if (placementMode === "source") {
-            // Clicked current source again = remove it
-            // console.log("Mode: Place source");
-            if (isStart) {
-              setStartPos(null);
-              return "E";
-            }
-            // Set a new source
-            if (startPos) {
-              const [sr, sc] = startPos;
-              prevGrid[sr][sc] = "E"; // Clear previous source
-              // console.log(`Source Position set to: [${sr},${sc}]`);
-            }
-            setStartPos([row, col]);
-            return "S";
-          }
+    // example: placing a wall
+    if (placementMode === "walls") {
+      newRow[col] = cell === "P" ? "E" : "P";
+    }
+    else if (placementMode === "source") {
+      if (cell === "S") {
+        newRow[col] = "E";
+        setStartPos(null);
+      } else {
+        if (startPos) {
+          const [sr, sc] = startPos;
+          const updatedStartRow = [...prev[sr]];
+          updatedStartRow[sc] = "E";
+          newGrid[sr] = updatedStartRow;
+        }
+        newRow[col] = "S";
+        setStartPos([row, col]);
+      }
+    }
+    else if (placementMode === "target") {
+      if (cell === "T") {
+        newRow[col] = "E";
+        setEndPos(null);
+      } else {
+        if (endPos) {
+          const [er, ec] = endPos;
+          const updatedEndRow = [...prev[er]];
+          updatedEndRow[ec] = "E";
+          newGrid[er] = updatedEndRow;
+        }
+        newRow[col] = "T";
+        setEndPos([row, col]);
+      }
+    }
 
-          // TARGET mode
-          if (placementMode === "target") {
-            // console.log("Mode: Place Target");
+    newGrid[row] = newRow;
+    return newGrid;
+  });
+};
 
-            if (isTarget) {
-              setEndPos(null);
-              return "E";
-            }
-            // Set a new target
-            if (endPos) {
-              const [er, ec] = endPos;
-              prevGrid[er][ec] = "E";
-            }
-            setEndPos([row, col]);
-            // console.log(`Target Position set to: [${row},${col}]`);
-            return "T";
-          }
-
-          // WALL mode
-          if (placementMode === "walls") {
-            if (!startPos || !endPos) {
-              console.warn("Place source and target before drawing walls.");
-              return cell;
-            }
-            if (cell === "P") return "E";
-            if (isStart || isTarget) return cell;
-            return "P";
-          }
-
-          return cell;
-        })
-      );
-
-      return [...newGrid]; // Return a new reference
-    });
-  };
 
   return (
     <div className="w-3/4 select-none">
@@ -229,8 +227,8 @@ const Graph = () => {
               const endKey = `${endPos[0]},${endPos[1]}`;
               const adjList = buildAdjacencyList(grid);
 
-              // BFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
-              DFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
+              BFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
+              // DFS(grid,adjList,startKey,endKey,handleVisit,handlePathCompletion);
             }}
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-gray-500 hover:bg-gray-600 mt-4`}
           >
