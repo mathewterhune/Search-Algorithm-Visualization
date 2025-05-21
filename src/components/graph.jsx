@@ -4,25 +4,33 @@ import { InitializeArray, buildAdjacencyList } from "../logic/logicUtils";
 import { BFS, DFS } from "../logic/algorithms";
 
 const Graph = () => {
+  // Track dimensions of the grid
   const [rows, setRows] = useState(20);
   const [cols, setCols] = useState(30);
-  const [grid, setGrid] = useState(() => InitializeArray(20, 30));
+  const [grid, setGrid] = useState(() => InitializeArray(20, 30)); // Initialize grid with default size
+  // setGrid is used to trigger a re-render for when the grid changes. 
+  
+  // Tracks mouse state to detect if the mouse is being held down and dragged.
   const [isMouseDown, setIsMouseDown] = useState(false);
+  
+  // Placement mode - Auto set to "source" for the first cell
   const [placementMode, setPlacementMode] = useState("source");
+  
+  // Stores the coordinates for the statr and end nodes
   const [startPos, setStartPos] = useState(null);
   const [endPos, setEndPos] = useState(null);
   
-  // For visualization state
-  const [visitedCells, setVisitedCells] = useState(new Set());
-  const [pathCells, setPathCells] = useState(new Set());
-  const [isRunning, setIsRunning] = useState(false);
+  // State visualization - op
+  const [visitedCells, setVisitedCells] = useState(new Set());  // Tracks which nodes have been visited during traversal
+  const [pathCells, setPathCells] = useState(new Set());        // tracks the final path from source to the target 
+  const [isRunning, setIsRunning] = useState(false);            // Track state of the algorithm, control if its running or not
   
-  // Create refs to avoid re-creating objects/functions when not needed
-  const gridRef = useRef(grid);
+  // Hold current values of state variables to avoid triggering multiple re-renders
+  const gridRef = useRef(grid);               
   const visitedRef = useRef(visitedCells);
   const pathRef = useRef(pathCells);
   
-  // Update refs when state changes
+  // Make it so the .current property of each ref is always reflecting the most recent state.
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
@@ -63,7 +71,14 @@ const Graph = () => {
     }
   }, [rows, cols, resetVisualization]);
 
-  // Optimized cell toggle
+  /**
+   * Memoized function to toggle the cell state, depending on the placement mode.
+   * 
+   * Placement modes:
+   *  - "source": Sets the cell currently being hovered over to "S" for source node
+   *  - "target": Sets the cell currently being hovered over to "T" for target node
+   *  - "walls": Sets the cell currently being hovered over to "P" for user placed walls
+   */
   const toggleCell = useCallback((row, col) => {
     setGrid(prev => {
       const cell = prev[row][col];
@@ -115,9 +130,14 @@ const Graph = () => {
     
     // Reset visualization when grid changes
     resetVisualization();
-  }, [placementMode, startPos, endPos, resetVisualization]);
+  }, 
+    [placementMode, startPos, endPos, resetVisualization] // Dependency array. So if none of these change, the instance of toggleCell will be used across renders.
+    );
 
   // Optimized visit handler - doesn't update grid state for every visit
+  /**
+   * handleVisit function writes to visitedCells state
+   */
   const handleVisit = useCallback((node) => {
     const [x, y] = node.split(",").map(Number);
     setVisitedCells(prev => {
@@ -128,6 +148,10 @@ const Graph = () => {
   }, []);
 
   // Optimized path handler - uses a separate state instead of updating grid
+  /**
+   * Animates the final path returned by the algorithm over time. Every i * 40ms, it adds a node to the pathCells.
+   * After the last node is added it sets the isRunning state to false
+   */
   const handlePathCompletion = useCallback((path) => {
     if (!path) {
       setIsRunning(false);
