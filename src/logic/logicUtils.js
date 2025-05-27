@@ -1,13 +1,13 @@
-import { EMPTY_NODE, VISITED_NODE, BOUNDARY_WALL, SOURCE_NODE, TARGET_NODE, PLACED_WALL, SOLUTION_PATH } from "../logic/nodeTypes";
+import { NODE_TYPES, ALGO } from "../logic/nodeTypes";
 
 // Function to initialize the grid with walls
-export const InitializeArray = (rows, cols, defaultValue = EMPTY_NODE) => {
+export const InitializeArray = (rows, cols, defaultValue = NODE_TYPES.EMPTY_NODE) => {
   const grid = [];
   for (let r = 0; r < rows; r++) {
     const row = [];
     for (let c = 0; c < cols; c++) {
       if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
-        row.push(BOUNDARY_WALL);
+        row.push(NODE_TYPES.BOUNDARY_WALL);
       } else {
         row.push(defaultValue);
       }
@@ -35,7 +35,7 @@ export const buildAdjacencyList = (grid) => {
   const obstacles = new Set();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (grid[r][c] === BOUNDARY_WALL || grid[r][c] === PLACED_WALL) {
+      if (grid[r][c] === NODE_TYPES.BOUNDARY_WALL || grid[r][c] === NODE_TYPES.PLACED_WALL) {
         obstacles.add(`${r},${c}`);
       }
     }
@@ -62,13 +62,7 @@ export const buildAdjacencyList = (grid) => {
         const neighborKey = `${nr},${nc}`;
         
         // Add neighbor if it's valid and not an obstacle
-        if (
-          nr >= 0 && 
-          nr < rows && 
-          nc >= 0 && 
-          nc < cols && 
-          !obstacles.has(neighborKey)
-        ) {
+        if ( nr >= 0 && nr < rows && nc >= 0 && nc < cols && !obstacles.has(neighborKey)) {
           neighbors.push(neighborKey);
         }
       }

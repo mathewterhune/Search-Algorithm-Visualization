@@ -160,6 +160,3 @@ export const DFS = (grid, adjList, source, sink, handleVisit, handlePathCompleti
         }
     }, 30);
 };
-
-
-

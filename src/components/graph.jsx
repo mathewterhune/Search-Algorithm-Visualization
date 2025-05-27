@@ -1,14 +1,20 @@
+// 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+
+// Components
 import GridSquare from "./GridSquare";
+import Debug from "./Debug";
+
+// Logic and utility functions
 import { InitializeArray, buildAdjacencyList } from "../logic/logicUtils";
-import { BFS, DFS} from "../logic/algorithms";
-import { EMPTY_NODE, VISITED_NODE, BOUNDARY_WALL, SOURCE_NODE, TARGET_NODE, PLACED_WALL, SOLUTION_PATH } from "../logic/nodeTypes";
+import { BFS, DFS } from "../logic/algorithms";
+import { DEFAULT_DATA, NODE_TYPES, ALGORITHM_CONTROL_STATES } from "../logic/nodeTypes";
 
 const Graph = () => {
   // Track dimensions of the grid
-  const [rows, setRows] = useState(20);
-  const [cols, setCols] = useState(30);
-  const [grid, setGrid] = useState(() => InitializeArray(20, 30)); // Initialize grid with default size
+  const [rows, setRows] = useState(DEFAULT_DATA.default_rows);
+  const [cols, setCols] = useState(DEFAULT_DATA.default_cols);
+  const [grid, setGrid] = useState(() => InitializeArray(DEFAULT_DATA.default_rows, DEFAULT_DATA.default_cols)); // Initialize grid with default size
   // setGrid is used to trigger a re-render for when the grid changes. 
   
   // Tracks mouse state to detect if the mouse is being held down and dragged.
@@ -20,7 +26,25 @@ const Graph = () => {
   // Stores the coordinates for the statr and end nodes
   const [startPos, setStartPos] = useState(null);
   const [endPos, setEndPos] = useState(null);
-  
+
+  // Algorithm Control states
+  const [algorithmState, setAlgorithmState] = useState(ALGORITHM_CONTROL_STATES.IDLE);
+  const [algorithmType, setAlgorithmType] = useState('BFS');
+  const [speed, setSpeed] = useState(30);
+
+  const algorithmStateRef = useRef({
+    queue: [],
+    visited: new Set(),
+    parent: {},
+    stack: [],
+    currentPath: null,
+    pathIndex: 0,
+    isAnimatingPath: false
+  });
+
+  const animationRef = useRef(null);
+  const lastStepTime = useRef(0);
+
   // State visualization - op
   const [visitedCells, setVisitedCells] = useState(new Set());  // Tracks which nodes have been visited during traversal
   const [pathCells, setPathCells] = useState(new Set());        // tracks the final path from source to the target 
@@ -85,42 +109,42 @@ const Graph = () => {
       const cell = prev[row][col];
 
       // Early return if nothing would change
-      if (placementMode === "walls" && (cell === SOURCE_NODE || cell === TARGET_NODE || cell === BOUNDARY_WALL)) return prev;
+      if (placementMode === "walls" && (cell === NODE_TYPES.SOURCE_NODE || cell === NODE_TYPES.TARGET_NODE || cell === NODE_TYPES.BOUNDARY_WALL)) return prev;
 
       // Create a new grid copy only when necessary
       const newGrid = [...prev];
       const newRow = [...prev[row]];
 
       if (placementMode === "walls") {
-        newRow[col] = cell === PLACED_WALL ? EMPTY_NODE : PLACED_WALL;
+        newRow[col] = cell === NODE_TYPES.PLACED_WALL ? NODE_TYPES.EMPTY_NODE : NODE_TYPES.PLACED_WALL;
       }
       else if (placementMode === "source") {
-        if (cell === SOURCE_NODE) {
-          newRow[col] = EMPTY_NODE;
+        if (cell === NODE_TYPES.SOURCE_NODE) {
+          newRow[col] = NODE_TYPES.EMPTY_NODE;
           setStartPos(null);
         } else {
           if (startPos) {
             const [sr, sc] = startPos;
             const updatedStartRow = [...prev[sr]];
-            updatedStartRow[sc] = EMPTY_NODE;
+            updatedStartRow[sc] = NODE_TYPES.EMPTY_NODE;
             newGrid[sr] = updatedStartRow;
           }
-          newRow[col] = SOURCE_NODE;
+          newRow[col] = NODE_TYPES.SOURCE_NODE;
           setStartPos([row, col]);
         }
       }
       else if (placementMode === "target") {
-        if (cell === TARGET_NODE) {
-          newRow[col] = EMPTY_NODE;
+        if (cell === NODE_TYPES.TARGET_NODE) {
+          newRow[col] = NODE_TYPES.EMPTY_NODE;
           setEndPos(null);
         } else {
           if (endPos) {
             const [er, ec] = endPos;
             const updatedEndRow = [...prev[er]];
-            updatedEndRow[ec] = EMPTY_NODE;
+            updatedEndRow[ec] = NODE_TYPES.EMPTY_NODE;
             newGrid[er] = updatedEndRow;
           }
-          newRow[col] = TARGET_NODE;
+          newRow[col] = NODE_TYPES.TARGET_NODE;
           setEndPos([row, col]);
         }
       }
@@ -201,15 +225,15 @@ const Graph = () => {
     const baseValue = grid[rowIndex][colIndex];
     
     // Path visualization takes precedence
-    if (pathCells.has(key) && baseValue !== SOURCE_NODE && baseValue !== TARGET_NODE) {
-      return SOLUTION_PATH;
+    if (pathCells.has(key) && baseValue !== NODE_TYPES.SOURCE_NODE && baseValue !== NODE_TYPES.TARGET_NODE) {
+      return NODE_TYPES.SOLUTION_PATH;
     }
     
     // Visited cells next
-    if (visitedCells.has(key) && baseValue !== SOURCE_NODE && baseValue !== TARGET_NODE) {
-      return VISITED_NODE;
+    if (visitedCells.has(key) && baseValue !== NODE_TYPES.SOURCE_NODE && baseValue !== NODE_TYPES.TARGET_NODE) {
+      return NODE_TYPES.VISITED_NODE;
     }
-    
+
     // Base grid value otherwise
     return baseValue;
   }, [grid, visitedCells, pathCells]);
@@ -335,6 +359,14 @@ const Graph = () => {
           </button>
         </div>
       </div>
+      <Debug
+        rows={rows}
+        cols={cols}
+        startPos={startPos}
+        endPos={endPos}
+        isRunning={isRunning}
+        placementMode={placementMode}
+      />
     </div>
   );
 };
