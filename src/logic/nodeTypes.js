@@ -8,3 +8,13 @@ export const SOLUTION_PATH = "SOLUTION_PATH";
 export const ALGORITHM_BFS = "ALGORITHM_BFS";
 export const ALGORITHM_DFS = "ALGORITHM_DFS";
 
+// COLOUR CONSTANTS
+export const COLOUR_EMPTY_NODE = "#ecf0f1"
+export const COLOUR_VISITED_NODE = "#abb2b9";
+export const COLOUR_BOUNDARY_WALL = "#212f3d";
+export const COLOUR_SOURCE_NODE = "#f1c40f";
+export const COLOUR_TARGET_NODE = "#d68910";
+export const COLOUR_PLACED_WALL = "#808b96";
+export const COLOUR_SOLUTION_PATH = "#239b56";
+export const COLOUR_DEFAULT = "#f5b7b1";
+
