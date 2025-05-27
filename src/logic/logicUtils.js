@@ -1,11 +1,13 @@
+import { EMPTY_NODE, VISITED_NODE, BOUNDARY_WALL, SOURCE_NODE, TARGET_NODE, PLACED_WALL, SOLUTION_PATH } from "../logic/nodeTypes";
+
 // Function to initialize the grid with walls
-export const InitializeArray = (rows, cols, defaultValue = "E") => {
+export const InitializeArray = (rows, cols, defaultValue = EMPTY_NODE) => {
   const grid = [];
   for (let r = 0; r < rows; r++) {
     const row = [];
     for (let c = 0; c < cols; c++) {
       if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
-        row.push("X");
+        row.push(BOUNDARY_WALL);
       } else {
         row.push(defaultValue);
       }
@@ -33,7 +35,7 @@ export const buildAdjacencyList = (grid) => {
   const obstacles = new Set();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (grid[r][c] === "X" || grid[r][c] === "P") {
+      if (grid[r][c] === BOUNDARY_WALL || grid[r][c] === PLACED_WALL) {
         obstacles.add(`${r},${c}`);
       }
     }
