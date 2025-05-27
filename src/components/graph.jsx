@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import GridSquare from "./GridSquare";
 import { InitializeArray, buildAdjacencyList } from "../logic/logicUtils";
-import { BFS, DFS } from "../logic/algorithms";
+import { BFS, DFS} from "../logic/algorithms";
+import { EMPTY_NODE, VISITED_NODE, BOUNDARY_WALL, SOURCE_NODE, TARGET_NODE, PLACED_WALL, SOLUTION_PATH } from "../logic/nodeTypes";
 
 const Graph = () => {
   // Track dimensions of the grid
@@ -84,42 +85,42 @@ const Graph = () => {
       const cell = prev[row][col];
 
       // Early return if nothing would change
-      if (placementMode === "walls" && (cell === "S" || cell === "T" || cell === "X")) return prev;
+      if (placementMode === "walls" && (cell === SOURCE_NODE || cell === TARGET_NODE || cell === BOUNDARY_WALL)) return prev;
 
       // Create a new grid copy only when necessary
       const newGrid = [...prev];
       const newRow = [...prev[row]];
 
       if (placementMode === "walls") {
-        newRow[col] = cell === "P" ? "E" : "P";
+        newRow[col] = cell === PLACED_WALL ? EMPTY_NODE : PLACED_WALL;
       }
       else if (placementMode === "source") {
-        if (cell === "S") {
-          newRow[col] = "E";
+        if (cell === SOURCE_NODE) {
+          newRow[col] = EMPTY_NODE;
           setStartPos(null);
         } else {
           if (startPos) {
             const [sr, sc] = startPos;
             const updatedStartRow = [...prev[sr]];
-            updatedStartRow[sc] = "E";
+            updatedStartRow[sc] = EMPTY_NODE;
             newGrid[sr] = updatedStartRow;
           }
-          newRow[col] = "S";
+          newRow[col] = SOURCE_NODE;
           setStartPos([row, col]);
         }
       }
       else if (placementMode === "target") {
-        if (cell === "T") {
-          newRow[col] = "E";
+        if (cell === TARGET_NODE) {
+          newRow[col] = EMPTY_NODE;
           setEndPos(null);
         } else {
           if (endPos) {
             const [er, ec] = endPos;
             const updatedEndRow = [...prev[er]];
-            updatedEndRow[ec] = "E";
+            updatedEndRow[ec] = EMPTY_NODE;
             newGrid[er] = updatedEndRow;
           }
-          newRow[col] = "T";
+          newRow[col] = TARGET_NODE;
           setEndPos([row, col]);
         }
       }
@@ -200,13 +201,13 @@ const Graph = () => {
     const baseValue = grid[rowIndex][colIndex];
     
     // Path visualization takes precedence
-    if (pathCells.has(key) && baseValue !== "S" && baseValue !== "T") {
-      return "A";
+    if (pathCells.has(key) && baseValue !== SOURCE_NODE && baseValue !== TARGET_NODE) {
+      return SOLUTION_PATH;
     }
     
     // Visited cells next
-    if (visitedCells.has(key) && baseValue !== "S" && baseValue !== "T") {
-      return "L";
+    if (visitedCells.has(key) && baseValue !== SOURCE_NODE && baseValue !== TARGET_NODE) {
+      return VISITED_NODE;
     }
     
     // Base grid value otherwise
