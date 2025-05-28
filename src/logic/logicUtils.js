@@ -1,4 +1,4 @@
-import { NODE_TYPES, ALGO } from "../logic/nodeTypes";
+import { NODE_TYPES} from "../logic/nodeTypes";
 
 // Function to initialize the grid with walls
 export const InitializeArray = (rows, cols, defaultValue = NODE_TYPES.EMPTY_NODE) => {
