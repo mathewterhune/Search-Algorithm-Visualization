@@ -1,33 +1,41 @@
-// 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // Components
 import GridSquare from "./GridSquare";
 import Debug from "./Debug";
 
+// Custom Hooks
+import { useGridState } from "../hooks/useGridState";
+
 // Logic and utility functions
-import { InitializeArray, buildAdjacencyList } from "../logic/logicUtils";
 import { BFS, DFS } from "../logic/algorithms";
-import { DEFAULT_DATA, NODE_TYPES, ALGORITHM_CONTROL_STATES } from "../logic/nodeTypes";
+import { NODE_TYPES, ALGORITHM_CONTROL_STATES } from "../logic/nodeTypes";
 
 const Graph = () => {
-  // Track dimensions of the grid
-  const [rows, setRows] = useState(DEFAULT_DATA.default_rows);
-  const [cols, setCols] = useState(DEFAULT_DATA.default_cols);
-  const [grid, setGrid] = useState(() => InitializeArray(DEFAULT_DATA.default_rows, DEFAULT_DATA.default_cols)); // Initialize grid with default size
-  // setGrid is used to trigger a re-render for when the grid changes. 
-  
-  // Tracks mouse state to detect if the mouse is being held down and dragged.
-  const [isMouseDown, setIsMouseDown] = useState(false);
-  
-  // Placement mode - Auto set to "source" for the first cell
-  const [placementMode, setPlacementMode] = useState("source");
-  
-  // Stores the coordinates for the statr and end nodes
-  const [startPos, setStartPos] = useState(null);
-  const [endPos, setEndPos] = useState(null);
+  // Use the custom grid state hook
+  const {
+    rows,
+    cols,
+    grid,
+    startPos,
+    endPos,
+    adjacencyList,
+    setRows,
+    setCols,
+    handleResize,
+    resetGrid,
+    setSourcePosition,
+    setTargetPosition,
+    removeSource,
+    removeTarget,
+    toggleWall,
+    getCellValue,
+    hasSourceAndTarget,
+  } = useGridState();
 
-  // Algorithm Control states
+  // Remaining state that's not grid-related
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [placementMode, setPlacementMode] = useState("source");
   const [algorithmState, setAlgorithmState] = useState(ALGORITHM_CONTROL_STATES.IDLE);
   const [algorithmType, setAlgorithmType] = useState('BFS');
   const [speed, setSpeed] = useState(30);
@@ -45,13 +53,13 @@ const Graph = () => {
   const animationRef = useRef(null);
   const lastStepTime = useRef(0);
 
-  // State visualization - op
-  const [visitedCells, setVisitedCells] = useState(new Set());  // Tracks which nodes have been visited during traversal
-  const [pathCells, setPathCells] = useState(new Set());        // tracks the final path from source to the target 
-  const [isRunning, setIsRunning] = useState(false);            // Track state of the algorithm, control if its running or not
+  // State visualization
+  const [visitedCells, setVisitedCells] = useState(new Set());
+  const [pathCells, setPathCells] = useState(new Set());
+  const [isRunning, setIsRunning] = useState(false);
   
   // Hold current values of state variables to avoid triggering multiple re-renders
-  const gridRef = useRef(grid);               
+  const gridRef = useRef(grid);
   const visitedRef = useRef(visitedCells);
   const pathRef = useRef(pathCells);
   
@@ -75,94 +83,58 @@ const Graph = () => {
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
-  // Memoize adjacency list - only recompute when grid changes
-  const adjacencyList = useMemo(() => buildAdjacencyList(grid), [grid]);
-
-  // Reset visualization state
+  // Reset the visualization state
   const resetVisualization = useCallback(() => {
     setVisitedCells(new Set());
     setPathCells(new Set());
   }, []);
 
-  // Handle resize with memoization
-  const handleResize = useCallback(() => {
-    const parsedRows = parseInt(rows);
-    const parsedCols = parseInt(cols);
-    if (!isNaN(parsedRows) && !isNaN(parsedCols)) {
-      setGrid(InitializeArray(parsedRows, parsedCols));
+  // Enhanced resize handler that also resets visualization
+  const handleGridResize = useCallback(() => {
+    const success = handleResize();
+    if (success) {
       resetVisualization();
-      setStartPos(null);
-      setEndPos(null);
     }
-  }, [rows, cols, resetVisualization]);
+    return success;
+  }, [handleResize, resetVisualization]);
+
+  // Enhanced reset that also resets visualization
+  const handleGridReset = useCallback(() => {
+    resetGrid();
+    resetVisualization();
+  }, [resetGrid, resetVisualization]);
 
   /**
-   * Memoized function to toggle the cell state, depending on the placement mode.
-   * 
-   * Placement modes:
-   *  - "source": Sets the cell currently being hovered over to "S" for source node
-   *  - "target": Sets the cell currently being hovered over to "T" for target node
-   *  - "walls": Sets the cell currently being hovered over to "P" for user placed walls
+   * Updated toggleCell function using the new grid state methods
    */
   const toggleCell = useCallback((row, col) => {
-    setGrid(prev => {
-      const cell = prev[row][col];
-
-      // Early return if nothing would change
-      if (placementMode === "walls" && (cell === NODE_TYPES.SOURCE_NODE || cell === NODE_TYPES.TARGET_NODE || cell === NODE_TYPES.BOUNDARY_WALL)) return prev;
-
-      // Create a new grid copy only when necessary
-      const newGrid = [...prev];
-      const newRow = [...prev[row]];
-
-      if (placementMode === "walls") {
-        newRow[col] = cell === NODE_TYPES.PLACED_WALL ? NODE_TYPES.EMPTY_NODE : NODE_TYPES.PLACED_WALL;
-      }
-      else if (placementMode === "source") {
-        if (cell === NODE_TYPES.SOURCE_NODE) {
-          newRow[col] = NODE_TYPES.EMPTY_NODE;
-          setStartPos(null);
-        } else {
-          if (startPos) {
-            const [sr, sc] = startPos;
-            const updatedStartRow = [...prev[sr]];
-            updatedStartRow[sc] = NODE_TYPES.EMPTY_NODE;
-            newGrid[sr] = updatedStartRow;
-          }
-          newRow[col] = NODE_TYPES.SOURCE_NODE;
-          setStartPos([row, col]);
-        }
-      }
-      else if (placementMode === "target") {
-        if (cell === NODE_TYPES.TARGET_NODE) {
-          newRow[col] = NODE_TYPES.EMPTY_NODE;
-          setEndPos(null);
-        } else {
-          if (endPos) {
-            const [er, ec] = endPos;
-            const updatedEndRow = [...prev[er]];
-            updatedEndRow[ec] = NODE_TYPES.EMPTY_NODE;
-            newGrid[er] = updatedEndRow;
-          }
-          newRow[col] = NODE_TYPES.TARGET_NODE;
-          setEndPos([row, col]);
-        }
-      }
-
-      newGrid[row] = newRow;
-      return newGrid;
-    });
+    const currentCell = getCellValue(row, col);
     
-    // Reset visualization when grid changes
-    resetVisualization();
-  }, 
-    [placementMode, startPos, endPos, resetVisualization] // Dependency array. So if none of these change, the instance of toggleCell will be used across renders.
-    );
+    if (placementMode === "walls") {
+      const success = toggleWall(row, col);
+      if (success) {
+        resetVisualization();
+      }
+    }
+    else if (placementMode === "source") {
+      if (currentCell === NODE_TYPES.SOURCE_NODE) {
+        removeSource();
+      } else {
+        setSourcePosition(row, col);
+      }
+      resetVisualization();
+    }
+    else if (placementMode === "target") {
+      if (currentCell === NODE_TYPES.TARGET_NODE) {
+        removeTarget();
+      } else {
+        setTargetPosition(row, col);
+      }
+      resetVisualization();
+    }
+  }, [placementMode, getCellValue, toggleWall, setSourcePosition, setTargetPosition, removeSource, removeTarget, resetVisualization]);
 
   // Optimized visit handler - doesn't update grid state for every visit
-  /**
-   * handleVisit function writes to visitedCells state
-   */
   const handleVisit = useCallback((node) => {
     const [x, y] = node.split(",").map(Number);
     setVisitedCells(prev => {
@@ -173,10 +145,6 @@ const Graph = () => {
   }, []);
 
   // Optimized path handler - uses a separate state instead of updating grid
-  /**
-   * Animates the final path returned by the algorithm over time. Every i * 40ms, it adds a node to the pathCells.
-   * After the last node is added it sets the isRunning state to false
-   */
   const handlePathCompletion = useCallback((path) => {
     if (!path) {
       setIsRunning(false);
@@ -200,9 +168,9 @@ const Graph = () => {
     });
   }, []);
 
-  // Run algorithm function
+  // Run algorithm function - now uses the hasSourceAndTarget helper
   const runAlgorithm = useCallback(() => {
-    if (!startPos || !endPos) {
+    if (!hasSourceAndTarget()) {
       alert("Please place both a source and a target node.");
       return;
     }
@@ -214,15 +182,14 @@ const Graph = () => {
     const startKey = `${startPos[0]},${startPos[1]}`;
     const endKey = `${endPos[0]},${endPos[1]}`;
 
-    // Use the memoized adjacency list
-    // BFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
+    // Use the memoized adjacency list from the hook
     DFS(grid, adjacencyList, startKey, endKey, handleVisit, handlePathCompletion);
-  }, [grid, adjacencyList, startPos, endPos, handleVisit, handlePathCompletion, resetVisualization]);
+  }, [grid, adjacencyList, startPos, endPos, handleVisit, handlePathCompletion, resetVisualization, hasSourceAndTarget]);
 
   // Calculate cell status once - handles both base grid and visualization overlays
   const getCellStatus = useCallback((rowIndex, colIndex) => {
     const key = `${rowIndex},${colIndex}`;
-    const baseValue = grid[rowIndex][colIndex];
+    const baseValue = getCellValue(rowIndex, colIndex);
     
     // Path visualization takes precedence
     if (pathCells.has(key) && baseValue !== NODE_TYPES.SOURCE_NODE && baseValue !== NODE_TYPES.TARGET_NODE) {
@@ -236,7 +203,7 @@ const Graph = () => {
 
     // Base grid value otherwise
     return baseValue;
-  }, [grid, visitedCells, pathCells]);
+  }, [getCellValue, visitedCells, pathCells]);
 
   // Memo-ize grid rendering to prevent unnecessary re-renders
   const gridDisplay = useMemo(() => (
@@ -298,7 +265,7 @@ const Graph = () => {
           disabled={isRunning}
         />
         <button
-          onClick={handleResize}
+          onClick={handleGridResize}
           className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
           disabled={isRunning}
         >
@@ -341,7 +308,7 @@ const Graph = () => {
         
         <div className="flex justify-center items-center gap-4">
           <button
-            onClick={handleResize}
+            onClick={handleGridReset}
             className={`pt-1 pl-4 pr-4 pb-1 rounded-xl text-white bg-red-500 hover:bg-red-600 mt-4`}
             disabled={isRunning}
           >
