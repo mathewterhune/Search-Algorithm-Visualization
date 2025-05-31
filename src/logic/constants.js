@@ -11,3 +11,11 @@ export const NODE_TYPES = {
     PATH: 5,
     CURRENT: 6,
 }
+
+export const ALGORITHMS = {
+    BFS: 'bfs',
+    DFS: 'dfs',
+    DIJKSTRA: 'dijkstra',
+    A_STAR: 'a_star',
+    GREEDY_BFS: 'greedy_bfs',
+}
