@@ -1,6 +1,17 @@
 import { NODE_TYPES } from './constants.js';
 
-
+/**
+ * GraphManager is a class that only manages the graph structure as it stands.
+ * 
+ * It is responsible for:
+ *      1. Initalizing the graph given a number of rows and columsn
+ *      2. Setting the borders of the graph.
+ *      3. Getting the neighbours of a node.
+ *      4. Setting nodes to different types (wall, start, end, etc).
+ *      5. Resetting the graph to its initial state.
+ *      6. Cloning the graph manager to create a new instance with the same graph.
+ *      7. Setting the source and sink nodes explicitly.
+ */
 export class GraphManager {
     constructor(rows,cols) {
         this.rows = rows;
