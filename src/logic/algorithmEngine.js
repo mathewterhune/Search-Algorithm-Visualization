@@ -14,29 +14,22 @@ export class AlgorithmEngine {
         this.algorithm = null;
     }
 
-    async runAlgorithm (algorithm, start, end) {
-        if (this.isRunning) {
-            console.warn('An algorithm is already running!!');
-            return;
-        }
-
-        this.isRunnning = true;
+    async runAlgorithm(algorithm, start, end) {
+        this.isRunning = true;
         this.isPaused = false;
+        this.algorithm = algorithm;
 
         try {
-            switch (algorithm) {
-                case ALGORITHMS.BFS:
-                    await this.runBFS(start, end);
-                    break;
-                case ALGORITHMS.DFS:
-                    await this.runDFS(start, end);
-                    break;
-                default:
-                    throw new Error(`Unknown algorithm: ${algorithm}`);
+            if (algorithm === ALGORITHMS.BFS) {
+                await this.runBFS(start, end);
+            } else if (algorithm === ALGORITHMS.DFS) {
+                await this.runDFS(start, end);
+            } else {
+                throw new Error('Unknown algorithm: ' + algorithm);
             }
         } catch (error) {
-            this.onError('Algorithm error:', error);
-            this.stop();
+            this.onError(error);
+            this.isRunning = false;
         }
     }
 
@@ -90,7 +83,7 @@ export class AlgorithmEngine {
 
     async runBFS (start, end) {
         const queue = [start];
-        const visited = new Set([`${start[0], start[1]}`]);
+        const visited = new Set([`${start[0]},${start[1]}`]);
         const parentMap = new Map();
 
         while (queue.length > 0 && this.isRunning) {
@@ -110,7 +103,7 @@ export class AlgorithmEngine {
                     return;
                 }
 
-                batch.push([row, col, NODE_TYPES.visited]);
+                batch.push([row, col, NODE_TYPES.VISITED]);
 
                 // Explore neighbours
                 for( const [nr,nc] of this.grid.getNeighbours(row,col)) {
@@ -163,7 +156,7 @@ export class AlgorithmEngine {
       this.onUpdate([[row, col, NODE_TYPES.VISITED]]);
 
       // Add neighbors to stack (in reverse order for proper DFS behavior)
-      const neighbors = this.grid.getNeighbors(row, col);
+      const neighbors = this.grid.getNeighbours(row, col);
       for (let i = neighbors.length - 1; i >= 0; i--) {
         const [nr, nc] = neighbors[i];
         const neighborKey = `${nr},${nc}`;

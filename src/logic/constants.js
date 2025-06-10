@@ -19,3 +19,5 @@ export const ALGORITHMS = {
     A_STAR: 'a_star',
     GREEDY_BFS: 'greedy_bfs',
 }
+
+export default { NODE_TYPES, ALGORITHMS };
