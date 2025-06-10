@@ -1,7 +1,6 @@
 import { NODE_TYPES, ALGORITHMS } from './constants.js'
 
 
-
 export class AlgorithmEngine {
     constructor(grid, onUpdate, onComplete, onError) {
         this.grid = grid;

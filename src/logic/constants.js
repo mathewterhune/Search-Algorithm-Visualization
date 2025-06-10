@@ -1,7 +1,3 @@
-
-
-
-
 export const NODE_TYPES = {
     EMPTY: 0,
     WALL: 1,
@@ -20,4 +16,10 @@ export const ALGORITHMS = {
     GREEDY_BFS: 'greedy_bfs',
 }
 
-export default { NODE_TYPES, ALGORITHMS };
+export const DRAW_MODES = {
+    WALL: 'wall',
+    START: 'start',
+    END: 'end',
+}
+
+export default { NODE_TYPES, ALGORITHMS, DRAW_MODES};
