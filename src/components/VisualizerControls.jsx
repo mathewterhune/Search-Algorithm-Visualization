@@ -1,9 +1,9 @@
 // VisualizerControls.jsx
 import React from 'react';
-import { ALGORITHMS, NODE_TYPES } from '../logic/constants';
-import { DRAW_MODES } from '../logic/drawModes';
+import { ALGORITHMS, NODE_TYPES, DRAW_MODES } from '../logic/constants';
 
-const VisualizerControls = ({ algorithm, setAlgorithm, speed, setSpeed, drawMode, setDrawMode, isRunning, engineRef }) => {
+
+export const VisualizerControls = ({ algorithm, setAlgorithm, speed, setSpeed, drawMode, setDrawMode, isRunning, engineRef }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
