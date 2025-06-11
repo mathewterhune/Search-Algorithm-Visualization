@@ -1,7 +1,7 @@
 import React from 'react';
 import { NODE_TYPES } from '../logic/constants.js';
 
-const Node = React.memo(({ type, onClick, onMouseEnter, onMouseDown }) => {
+export const Node = React.memo(({ type, onClick, onMouseEnter, onMouseDown }) => {
   const getClassName = () => {
     const base = "w-4 h-4 border border-gray-300 transition-colors duration-75";
     switch (type) {
