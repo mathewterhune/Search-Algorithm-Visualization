@@ -87,12 +87,8 @@ yarn start
 
 ## Examples
 
-
-Graph Initial State
 ![EmptyGraph](/images/Empty.png)
-Graph After Pressing Generate Maze
 ![MazeGraph](/images/Randomized.png)
-Graph After running BFS
 ![CompletedGraph](/images/Complete.png)
 
 ---
