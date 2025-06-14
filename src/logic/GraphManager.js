@@ -79,17 +79,17 @@ export class GraphManager {
      *  @param {number} type: the type of the node that is being set
      */
     setBorders() {
-        console.log('Setting borders');
-        let counter = 0;
+        // console.log('Setting borders');
+        // let counter = 0;
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 if(r ===0 || r === this.rows - 1 || c === 0 || c === this.cols - 1) {
-                    counter++;
+                    // counter++;
                     this.graph[this.getIndex(r,c)] = NODE_TYPES.WALL;
                 }
             }
         }
-        console.log(`Set ${counter} borders`);
+        // console.log(`Set ${counter} borders`);
     }
 
     setSource(row,col) {this.setNode(row,col,NODE_TYPES.START);}
