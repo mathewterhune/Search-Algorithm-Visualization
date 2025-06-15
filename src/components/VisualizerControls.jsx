@@ -20,6 +20,7 @@ export const VisualizerControls = ({ algorithm, setAlgorithm, speed, setSpeed, d
           >
             <option value={ALGORITHMS.BFS}>Breadth-First Search</option>
             <option value={ALGORITHMS.DFS}>Depth-First Search</option>
+            <option value={ALGORITHMS.DIJKSTRA}>Dijkstra's Algorithm</option>
           </select>
         </div>
 

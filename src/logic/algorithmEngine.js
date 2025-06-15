@@ -37,7 +37,11 @@ export class AlgorithmEngine {
                 await this.runBFS(start, end);
             } else if (algorithm === ALGORITHMS.DFS) {
                 await this.runDFS(start, end);
-            } else {
+            }
+            else if (algorithm === ALGORITHMS.DIJKSTRA) { 
+                await this.runDijkstra(start, end);
+            } 
+            else {
                 throw new Error('Unknown algorithm: ' + algorithm);
             }
         } catch (error) {
@@ -208,5 +212,66 @@ export class AlgorithmEngine {
         this.onComplete(null);
   }
 
+
+  async runDijkstra(start, end) {
+    // Priority queue implementation using array (for simplicity)
+    const pq = [[0, start]]; // [distance, [row, col]]
+    const distances = new Map();
+    const visited = new Set();
+    const parent = new Map();
+    
+    // Initialize distances
+    const startKey = `${start[0]},${start[1]}`;
+    distances.set(startKey, 0);
+
+    while (pq.length > 0 && this.isRunning) {
+        // Handle pause state
+        if (this.isPaused) {
+            await this.waitForResume();
+        }
+
+        // Sort to get minimum distance (simple priority queue)
+        pq.sort((a, b) => a[0] - b[0]);
+        const [currentDist, [row, col]] = pq.shift();
+        const currentKey = `${row},${col}`;
+
+        // Skip if already visited
+        if (visited.has(currentKey)) continue;
+        visited.add(currentKey);
+
+        // Check if we reached the destination
+        if (row === end[0] && col === end[1]) {
+            const path = this.reconstructPath(parent, start, end);
+            this.onComplete(path);
+            return;
+        }
+
+        // Mark as visited for visualization
+        this.onUpdate([[row, col, NODE_TYPES.VISITED]]);
+
+        // Explore neighbors
+        const neighbors = this.GraphManager.getNeighbours(row, col);
+        for (const [nr, nc] of neighbors) {
+            const neighborKey = `${nr},${nc}`;
+            
+            if (!visited.has(neighborKey)) {
+                // In this basic version, all edges have weight 1
+                const newDist = currentDist + 1;
+                const currentNeighborDist = distances.get(neighborKey) || Infinity;
+                
+                if (newDist < currentNeighborDist) {
+                    distances.set(neighborKey, newDist);
+                    parent.set(neighborKey, [row, col]);
+                    pq.push([newDist, [nr, nc]]);
+                }
+            }
+        }
+
+        await this.sleep(this.speed);
+    }
+
+    // No path found
+    this.onComplete(null);
+}
 
 }
