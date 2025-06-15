@@ -15,7 +15,6 @@ export const ALGORITHMS = {
     A_STAR: 'a_star',
     GREEDY_BFS: 'greedy_bfs',
 }
-
 export const DRAW_MODES = {
     WALL: 'wall',
     START: 'start',
