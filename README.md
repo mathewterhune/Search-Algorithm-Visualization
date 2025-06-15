@@ -11,6 +11,7 @@ An interactive web application for visualizing pathfinding algorithms in real-ti
 ### Algorithms
 - **Breadth-First Search (BFS)** – Guarantees shortest path in unweighted graphs
 - **Depth-First Search (DFS)** – Explores as far as possible along each branch
+- **Priority Queue - Dijkstras** 
 
 ### Interactive Controls
 - **Draw Modes**: Toggle between placing walls, start point, and end point
@@ -166,6 +167,10 @@ src/
 - **Space Complexity**: O(V)
 - **Behavior**: Goes deep, then backtracks
 - **Visualization**: Windy, recursive path patterns
+
+### Priority Queue DIJKSTRAS
+- **Time Complexity**: O((V + E) log(V))
+- **Space Complexity**: O(V)
 
 ---
 
